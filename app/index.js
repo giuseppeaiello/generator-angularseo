@@ -97,6 +97,30 @@ Generator.prototype.askForBootstrap = function askForBootstrap() {
   }.bind(this));
 };
 
+Generator.prototype.askForFoundation = function askForFoundation() {
+  var cb = this.async();
+
+  this.prompt([{
+    type: 'confirm',
+    name: 'foundation',
+    message: 'Would you like to include Zurb Foundation?',
+    default: false
+  }, {
+    type: 'confirm',
+    name: 'compassFoundation',
+    message: 'Would you like to use Zurb Foundation for Compass (as opposed to vanilla CSS)?',
+    default: false,
+    when: function (props) {
+      return props.foundation;
+    }
+  }], function (props) {
+    this.foundation = props.foundation;
+    this.compassFoundation = props.compassFoundation;
+
+    cb();
+  }.bind(this));
+};
+
 Generator.prototype.askForModules = function askForModules() {
   var cb = this.async();
 
@@ -128,15 +152,24 @@ Generator.prototype.askForModules = function askForModules() {
 
 // Waiting a more flexible solution for #138
 Generator.prototype.bootstrapFiles = function bootstrapFiles() {
-  var sass = this.compassBootstrap;
+  var sassBootstrap = this.compassBootstrap;
+  var sassFoundation = this.compassFoundation;
+  var sass = sassBootstrap;
+
+  if (this.compassFoundation) { sass = sassFoundation; }
+
   var files = [];
   var source = 'styles/' + ( sass ? 'scss/' : 'css/' );
 
-  if (sass) {
+  if (sassBootstrap) {
     files.push('main.scss');
+  } else if (sassFoundation) {
+    files.push('main-foundation.scss');
   } else {
     if (this.bootstrap) {
       files.push('bootstrap.css');
+    } else if (this.foundation) {
+      files.push('foundation.css');
     }
 
     files.push('main.css');
@@ -158,27 +191,48 @@ Generator.prototype.bootstrapFiles = function bootstrapFiles() {
 };
 
 Generator.prototype.bootstrapJS = function bootstrapJS() {
-  if (!this.bootstrap) {
-    return;  // Skip if disabled.
+  if (this.bootstrap) {
+    // Wire Twitter Bootstrap plugins
+    this.indexFile = this.appendScripts(this.indexFile, 'scripts/plugins.js', [
+      'bower_components/jquery/jquery.js',
+      'bower_components/bootstrap-sass/js/bootstrap-affix.js',
+      'bower_components/bootstrap-sass/js/bootstrap-alert.js',
+      'bower_components/bootstrap-sass/js/bootstrap-dropdown.js',
+      'bower_components/bootstrap-sass/js/bootstrap-tooltip.js',
+      'bower_components/bootstrap-sass/js/bootstrap-modal.js',
+      'bower_components/bootstrap-sass/js/bootstrap-transition.js',
+      'bower_components/bootstrap-sass/js/bootstrap-button.js',
+      'bower_components/bootstrap-sass/js/bootstrap-popover.js',
+      'bower_components/bootstrap-sass/js/bootstrap-typeahead.js',
+      'bower_components/bootstrap-sass/js/bootstrap-carousel.js',
+      'bower_components/bootstrap-sass/js/bootstrap-scrollspy.js',
+      'bower_components/bootstrap-sass/js/bootstrap-collapse.js',
+      'bower_components/bootstrap-sass/js/bootstrap-tab.js'
+    ]);
+  } else if (this.foundation) {
+    // Wire Zurb Foundation plugins
+    this.indexFile = this.appendScripts(this.indexFile, 'scripts/plugins.js', [
+      'bower_components/jquery/jquery.js',
+      'bower_components/foundation/js/foundation/foundation.alerts.js',
+      'bower_components/foundation/js/foundation/foundation.clearing.js',
+      'bower_components/foundation/js/foundation/foundation.cookie.js',
+      'bower_components/foundation/js/foundation/foundation.dropdown.js',
+      'bower_components/foundation/js/foundation/foundation.forms.js',
+      'bower_components/foundation/js/foundation/foundation.interchange.js',
+      'bower_components/foundation/js/foundation/foundation.joyride.js',
+      'bower_components/foundation/js/foundation/foundation.js',
+      'bower_components/foundation/js/foundation/foundation.magellan.js',
+      'bower_components/foundation/js/foundation/foundation.orbit.js',
+      'bower_components/foundation/js/foundation/foundation.placeholder.js',
+      'bower_components/foundation/js/foundation/foundation.reveal.js',
+      'bower_components/foundation/js/foundation/foundation.section.js',
+      'bower_components/foundation/js/foundation/foundation.tooltips.js',
+      'bower_components/foundation/js/foundation/foundation.topbar.js',
+      'bower_components/foundation/js/foundation/index.js',
+      'bower_components/foundation/js/vendor/custom.modernizr.js',
+      'bower_components/foundation/js/vendor/zepto.js'
+    ]);
   }
-
-  // Wire Twitter Bootstrap plugins
-  this.indexFile = this.appendScripts(this.indexFile, 'scripts/plugins.js', [
-    'bower_components/jquery/jquery.js',
-    'bower_components/bootstrap-sass/js/bootstrap-affix.js',
-    'bower_components/bootstrap-sass/js/bootstrap-alert.js',
-    'bower_components/bootstrap-sass/js/bootstrap-dropdown.js',
-    'bower_components/bootstrap-sass/js/bootstrap-tooltip.js',
-    'bower_components/bootstrap-sass/js/bootstrap-modal.js',
-    'bower_components/bootstrap-sass/js/bootstrap-transition.js',
-    'bower_components/bootstrap-sass/js/bootstrap-button.js',
-    'bower_components/bootstrap-sass/js/bootstrap-popover.js',
-    'bower_components/bootstrap-sass/js/bootstrap-typeahead.js',
-    'bower_components/bootstrap-sass/js/bootstrap-carousel.js',
-    'bower_components/bootstrap-sass/js/bootstrap-scrollspy.js',
-    'bower_components/bootstrap-sass/js/bootstrap-collapse.js',
-    'bower_components/bootstrap-sass/js/bootstrap-tab.js'
-  ]);
 };
 
 Generator.prototype.extraModules = function extraModules() {
